@@ -29,17 +29,28 @@ function parseUndergraduateScheduleCell(text) {
 function parseUndergraduateCell(cell) {
   const out = [];
   let currentName = null;
+  let pending = []; // 自上一个 slot 以来的叶子文本行
   for (const div of cell.querySelectorAll('div')) {
     if (div.children.length !== 0) continue;
     const text = (div.textContent || '').trim();
     if (!text) continue;
     const style = div.getAttribute('style') || '';
-    if (style.includes('rgb(0, 192, 239)') || style.includes('rgb(0,192,239)')) {
-      currentName = text;
+    const slot = parseUndergraduateScheduleCell(text);
+    if (slot) {
+      // 课程名优先取蓝色 div；黑色字课程（暂无教学大纲、不可点击）回退取块首行
+      const name = currentName || (pending.length ? pending[0] : '');
+      if (!name) continue;
+      out.push({ name, ...slot });
+      currentName = null;
+      pending = [];
       continue;
     }
-    const slot = parseUndergraduateScheduleCell(text);
-    if (slot && currentName) out.push({ name: currentName, ...slot });
+    if (style.includes('rgb(0, 192, 239)') || style.includes('rgb(0,192,239)')) {
+      currentName = text;
+      pending = [];
+    } else {
+      pending.push(text);
+    }
   }
   return out;
 }
